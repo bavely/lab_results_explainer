@@ -9,7 +9,8 @@ export const commonLabAliases: Record<string, string[]> = {
   tsh: ["tsh", "thyroid stimulating hormone"],
   free_t4: ["free t4", "ft4", "thyroxine free"],
   creatinine: ["creatinine", "serum creatinine"],
-  egfr: ["egfr", "estimated gfr"]
+  egfr: ["egfr", "estimated gfr"],
+  rdw_cv: ["rdw", "rdw cv", "rdw-cv", "red cell distribution width", "red blood cell distribution width"]
 };
 
 export const educationalLabDescriptions: Record<string, string> = {
@@ -23,5 +24,6 @@ export const educationalLabDescriptions: Record<string, string> = {
   tsh: "TSH is a hormone that helps signal the thyroid gland and is commonly used to screen thyroid function.",
   free_t4: "Free T4 is a thyroid hormone measurement that can provide additional thyroid context along with TSH.",
   creatinine: "Creatinine is a waste product filtered by the kidneys and is commonly used to estimate kidney function.",
-  egfr: "eGFR is an estimated measure of kidney filtering function and should be interpreted with clinical context."
+  egfr: "eGFR is an estimated measure of kidney filtering function and should be interpreted with clinical context.",
+  rdw_cv: "RDW-CV (red cell distribution width, coefficient of variation) is a CBC blood test index that measures how much red blood cell size varies; it is reported as a percentage and can help flag anisocytosis when interpreted with other red blood cell indices."
 };
