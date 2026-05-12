@@ -1,4 +1,4 @@
-import OpenAI from "openai";
+import {OpenAI} from "openai";
 import type { CombinationFlag, LabExplanation, PatientContext } from "@lab-results/shared";
 import { labExplanationSchema } from "@lab-results/shared";
 import { env } from "../../config/env.js";
@@ -11,7 +11,7 @@ type GenerateInput = {
 };
 
 export async function generateOpenAiExplanations(input: GenerateInput): Promise<LabExplanation[]> {
-  const client = new OpenAI({ apiKey: env.OPENAI_API_KEY });
+  const client = new OpenAI( {baseURL: "https://meditrackai-openai.openai.azure.com/openai/v1/", apiKey: env.OPENAI_API_KEY });
 
   const completion = await client.chat.completions.create({
     model: "gpt-4o-mini",
