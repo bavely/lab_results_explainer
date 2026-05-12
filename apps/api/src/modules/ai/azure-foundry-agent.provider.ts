@@ -17,7 +17,7 @@ export async function generateAzureFoundryAgentExplanations(input: GenerateInput
   }
 
   const projectClient = new AIProjectClient(env.AZURE_AI_PROJECT_ENDPOINT, new DefaultAzureCredential());
-  const openAIClient = projectClient.getAzureOpenAIClient();
+  const openAIClient = await projectClient.getAzureOpenAIClient();
 
   const conversation = await openAIClient.conversations.create({
     items: [{
