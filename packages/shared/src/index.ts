@@ -79,6 +79,7 @@ export const labExplanationSchema = z.object({
   referenceRange: referenceRangeSchema.optional(),
   status: labStatusSchema,
   severity: labSeveritySchema,
+  testDefinition: z.string().optional(),
   plainLanguageExplanation: z.string(),
   possibleGeneralCauses: z.array(z.string()).default([]),
   followUpQuestions: z.array(z.string()).default([]),

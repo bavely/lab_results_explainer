@@ -20,6 +20,14 @@ export function LabResultCard({ result }: { result: LabExplanation }) {
       </CardHeader>
       <CardContent className="space-y-5">
         <RangeIndicator value={result.value} range={result.referenceRange} />
+
+        {result.testDefinition && (
+          <div className="rounded-2xl border border-blue-100 bg-blue-50 p-4">
+            <h4 className="text-xs font-semibold uppercase tracking-wide text-blue-600">What is this test?</h4>
+            <p className="mt-1 text-sm leading-6 text-slate-700">{result.testDefinition}</p>
+          </div>
+        )}
+
         <p className="leading-7 text-slate-700">{result.plainLanguageExplanation}</p>
 
         {result.followUpQuestions.length > 0 && (

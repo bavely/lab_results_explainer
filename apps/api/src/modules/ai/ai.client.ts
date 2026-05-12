@@ -67,6 +67,7 @@ export async function generateLabExplanations(input: GenerateInput): Promise<Lab
 
   return input.classifiedResults.map((result) => labExplanationSchema.parse({
     ...result,
+    testDefinition: `${result.testName} is a blood or lab measurement that clinicians use to assess specific aspects of your health. Ask your healthcare provider for details about what this particular test measures and why it was ordered for you.`,
     plainLanguageExplanation: buildMockExplanation(result),
     possibleGeneralCauses: buildMockCauses(result.status),
     followUpQuestions: buildFollowUpQuestions(result),

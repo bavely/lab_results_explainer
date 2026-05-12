@@ -5,12 +5,14 @@
   "description": "Patient-friendly AI lab results explainer built with React, Tailwind CSS, shadcn/ui, Node.js, and OpenAI.",
   "packageManager": "pnpm@10.0.0",
   "scripts": {
-  "dev": "pnpm --filter @lab-results/shared build && pnpm -r --parallel --filter api --filter web dev",
-  "build": "pnpm --filter @lab-results/shared build && pnpm --filter api build && pnpm --filter web build",
-  "typecheck": "pnpm -r typecheck",
-  "clean": "rimraf apps/*/dist packages/*/dist"
+    "dev": "pnpm --filter @lab-results/shared build && concurrently --raw --kill-others-on-fail \"pnpm --filter api dev\" \"wait-on tcp:127.0.0.1:4000 -t 30000 && pnpm --filter web dev\"",
+    "build": "pnpm --filter @lab-results/shared build && pnpm --filter api build && pnpm --filter web build",
+    "typecheck": "pnpm -r typecheck",
+    "clean": "rimraf apps/*/dist packages/*/dist"
   },
   "devDependencies": {
-    "rimraf": "^6.0.1"
+    "concurrently": "^9.2.1",
+    "rimraf": "^6.0.1",
+    "wait-on": "^9.0.10"
   }
 }

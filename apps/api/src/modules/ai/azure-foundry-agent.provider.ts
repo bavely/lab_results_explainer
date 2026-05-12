@@ -25,11 +25,11 @@ export async function generateAzureFoundryAgentExplanations(input: GenerateInput
       role: "user",
       content: JSON.stringify({
         systemInstructions: LAB_EXPLAINER_SYSTEM_PROMPT,
-        task: "Explain classified results in plain English, fill in missing reference ranges with general educational ranges when possible, and clearly flag any estimated ranges.",
+        task: "For each classified result: (1) set 'testDefinition' to a 1–3 sentence plain-English description of what the test measures and why clinicians order it; (2) explain the result value in plain English; (3) fill in missing reference ranges with general educational ranges when possible and clearly flag any estimated ranges.",
         patientContext: input.patientContext ?? {},
         classifiedResults: input.classifiedResults,
         combinationFlags: input.combinationFlags,
-        requiredShape: { results: [] }
+        requiredShape: { results: [{ testDefinition: "", plainLanguageExplanation: "", possibleGeneralCauses: [], followUpQuestions: [], shouldDiscussWithClinician: false, disclaimer: "" }] }
       })
     }]
   });
