@@ -1,4 +1,4 @@
-import type { AnalyzeLabsRequest, AnalyzeLabsResponse, LabInput } from "@lab-results/shared";
+import type { AnalyzeLabsRequest, AnalyzeLabsResponse, ExtractedLabResult } from "@lab-results/shared";
 
 export async function analyzeLabs(payload: AnalyzeLabsRequest): Promise<AnalyzeLabsResponse> {
   const response = await fetch("/api/labs/analyze", {
@@ -17,7 +17,7 @@ export async function analyzeLabs(payload: AnalyzeLabsRequest): Promise<AnalyzeL
   return response.json();
 }
 
-export async function uploadLabReportPdf(file: File): Promise<{ extractedResults: LabInput[]; needsReview: boolean; message: string }> {
+export async function uploadLabReportPdf(file: File): Promise<{ extractedResults: ExtractedLabResult[]; needsReview: boolean; message: string }> {
   const formData = new FormData();
   formData.append("file", file);
 

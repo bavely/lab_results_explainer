@@ -45,6 +45,19 @@ export const labInputSchema = z.object({
   notes: z.string().optional()
 });
 
+export const extractedLabResultSchema = z.object({
+  testName: z.string().min(1, "Test name is required"),
+  value: optionalNumber,
+  valueText: z.string().optional(),
+  comparator: z.enum(["<", ">"]).optional(),
+  unit: z.string().optional().default(""),
+  flag: z.enum(["H", "L"]).optional(),
+  referenceRange: referenceRangeSchema.optional().default({}),
+  source: z.literal("pdf").optional(),
+  isAnalyzable: z.boolean().optional().default(false),
+  notes: z.string().optional()
+});
+
 export const analyzeLabsRequestSchema = z.object({
   patientContext: patientContextSchema.optional().default({ sex: "unknown" }),
   results: z.array(labInputSchema).min(1, "At least one lab result is required")
@@ -92,6 +105,7 @@ export type LabSeverity = z.infer<typeof labSeveritySchema>;
 export type ReferenceRange = z.infer<typeof referenceRangeSchema>;
 export type PatientContext = z.infer<typeof patientContextSchema>;
 export type LabInput = z.infer<typeof labInputSchema>;
+export type ExtractedLabResult = z.infer<typeof extractedLabResultSchema>;
 export type CombinationFlag = z.infer<typeof combinationFlagSchema>;
 export type LabExplanation = z.infer<typeof labExplanationSchema>;
 export type AnalyzeLabsRequest = z.infer<typeof analyzeLabsRequestSchema>;

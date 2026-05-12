@@ -1,7 +1,7 @@
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import type { LabInput } from "@lab-results/shared";
+import type { ExtractedLabResult, LabInput } from "@lab-results/shared";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LabResultTable } from "@/components/labs/LabResultTable";
@@ -11,7 +11,7 @@ import { analyzeLabs, uploadLabReportPdf } from "@/features/lab-analysis/api";
 
 export function UploadReportPage() {
   const navigate = useNavigate();
-  const [extractedResults, setExtractedResults] = useState<LabInput[]>([]);
+  const [extractedResults, setExtractedResults] = useState<ExtractedLabResult[]>([]);
 
   const uploadMutation = useMutation({
     mutationFn: uploadLabReportPdf,
@@ -22,6 +22,18 @@ export function UploadReportPage() {
     mutationFn: analyzeLabs,
     onSuccess: (data) => navigate("/results", { state: { analysis: data } })
   });
+
+  const analyzableResults: LabInput[] = extractedResults
+    .filter((result): result is ExtractedLabResult & { value: number } => typeof result.value === "number")
+    .map((result) => ({
+      testName: result.testName,
+      value: result.value,
+      unit: result.unit ?? "",
+      referenceRange: result.referenceRange ?? {},
+      notes: result.notes
+    }));
+
+  const reviewOnlyCount = extractedResults.length - analyzableResults.length;
 
   return (
     <div className="space-y-8">
@@ -44,12 +56,17 @@ export function UploadReportPage() {
           </CardHeader>
           <CardContent className="space-y-5">
             <LabResultTable results={extractedResults} />
+            {reviewOnlyCount > 0 && (
+              <p className="text-sm text-amber-700">
+                {reviewOnlyCount} extracted value{reviewOnlyCount === 1 ? "" : "s"} are qualitative or incomplete and will stay in review-only mode.
+              </p>
+            )}
             <div className="flex justify-end">
               <Button
-                disabled={analyzeMutation.isPending}
-                onClick={() => analyzeMutation.mutate({ patientContext: { sex: "unknown" }, results: extractedResults })}
+                disabled={analyzeMutation.isPending || analyzableResults.length === 0}
+                onClick={() => analyzeMutation.mutate({ patientContext: { sex: "unknown" }, results: analyzableResults })}
               >
-                {analyzeMutation.isPending ? "Analyzing..." : "Analyze extracted values"}
+                {analyzeMutation.isPending ? "Analyzing..." : "Analyze numeric extracted values"}
               </Button>
             </div>
           </CardContent>
