@@ -17,7 +17,7 @@ export async function analyzeLabs(payload: AnalyzeLabsRequest): Promise<AnalyzeL
   return response.json();
 }
 
-export async function uploadLabReportPdf(file: File): Promise<{ extractedResults: ExtractedLabResult[]; needsReview: boolean; message: string }> {
+export async function uploadLabReportPdf(file: File): Promise<{ extractedResults: ExtractedLabResult[]; needsReview: boolean; confidence: number; extractionSource: string; message: string }> {
   const formData = new FormData();
   formData.append("file", file);
 

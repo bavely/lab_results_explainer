@@ -38,9 +38,9 @@ export function UploadReportPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Upload lab report PDF</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Upload lab report file</h1>
         <p className="mt-2 max-w-2xl text-slate-600">
-          The API extracts candidate lab values from text-based PDFs. Always review extracted values before analysis.
+          The API extracts candidate lab values from text PDFs, scanned PDFs (OCR), and image uploads. Always review extracted values before analysis.
         </p>
       </div>
       <MedicalDisclaimer />
