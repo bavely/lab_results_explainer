@@ -1,7 +1,5 @@
 import pdfParse from "pdf-parse";
 import type { ExtractedLabResult } from "@lab-results/shared";
-import { createCanvas } from "canvas";
-import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
 import Tesseract from "tesseract.js";
 import { extractLabValuesFromText } from "./extractLabValues.js";
 
@@ -43,33 +41,53 @@ export async function parseLabReportFile(buffer: Buffer, mimetype: string): Prom
 }
 
 async function extractTextFromPdfWithOcr(buffer: Buffer): Promise<{ text: string; confidence: number }> {
-  const loadingTask = getDocument({ data: new Uint8Array(buffer) });
-  const pdf = await loadingTask.promise;
+  const renderer = await loadPdfOcrRenderer();
 
-  let merged = "";
-  let totalConfidence = 0;
-  let pagesProcessed = 0;
-
-  const maxPages = Math.min(pdf.numPages, 5);
-
-  for (let pageNo = 1; pageNo <= maxPages; pageNo += 1) {
-    const page = await pdf.getPage(pageNo);
-    const viewport = page.getViewport({ scale: 2.0 });
-    const canvas = createCanvas(Math.ceil(viewport.width), Math.ceil(viewport.height));
-    const context = canvas.getContext("2d");
-
-    await page.render({ canvasContext: context as any, viewport }).promise;
-
-    const ocr = await runOcrOnImage(canvas.toBuffer("image/png"));
-    merged += `\n${ocr.text}`;
-    totalConfidence += ocr.confidence;
-    pagesProcessed += 1;
+  if (!renderer) {
+    return { text: "", confidence: 0 };
   }
 
-  return {
-    text: merged.trim(),
-    confidence: pagesProcessed === 0 ? 0 : totalConfidence / pagesProcessed
-  };
+  return renderer(buffer);
+}
+
+async function loadPdfOcrRenderer(): Promise<((buffer: Buffer) => Promise<{ text: string; confidence: number }>) | null> {
+  try {
+    const [{ getDocument }, { createCanvas }] = await Promise.all([
+      import("pdfjs-dist/legacy/build/pdf.mjs"),
+      import("canvas")
+    ]);
+
+    return async (buffer: Buffer) => {
+      const loadingTask = getDocument({ data: new Uint8Array(buffer) });
+      const pdf = await loadingTask.promise;
+
+      let merged = "";
+      let totalConfidence = 0;
+      let pagesProcessed = 0;
+      const maxPages = Math.min(pdf.numPages, 5);
+
+      for (let pageNo = 1; pageNo <= maxPages; pageNo += 1) {
+        const page = await pdf.getPage(pageNo);
+        const viewport = page.getViewport({ scale: 2.0 });
+        const canvas = createCanvas(Math.ceil(viewport.width), Math.ceil(viewport.height));
+        const context = canvas.getContext("2d");
+        await page.render({ canvasContext: context as any, viewport }).promise;
+
+        const ocr = await runOcrOnImage(canvas.toBuffer("image/png"));
+        merged += `
+${ocr.text}`;
+        totalConfidence += ocr.confidence;
+        pagesProcessed += 1;
+      }
+
+      return {
+        text: merged.trim(),
+        confidence: pagesProcessed === 0 ? 0 : totalConfidence / pagesProcessed
+      };
+    };
+  } catch {
+    return null;
+  }
 }
 
 async function runOcrOnImage(buffer: Buffer): Promise<{ text: string; confidence: number }> {
