@@ -11,10 +11,15 @@ type GenerateInput = {
 };
 
 export async function generateOpenAiExplanations(input: GenerateInput): Promise<LabExplanation[]> {
-  const client = new OpenAI( {baseURL: "https://meditrackai-openai.openai.azure.com/openai/v1/", apiKey: env.OPENAI_API_KEY });
+  const client = new OpenAI({
+    apiKey: env.OPENAI_API_KEY,
+    ...(env.OPENAI_BASE_URL ? { baseURL: env.OPENAI_BASE_URL } : {})
+  });
+
+  const model = env.OPENAI_MODEL ?? env.AZURE_OPENAI_DEPLOYMENT;
 
   const completion = await client.chat.completions.create({
-    model: "gpt-4o-mini",
+    model,
     temperature: 0.2,
     response_format: { type: "json_object" },
     messages: [

@@ -1,6 +1,7 @@
 import type { CombinationFlag, LabExplanation, PatientContext } from "@lab-results/shared";
 import { labExplanationSchema } from "@lab-results/shared";
 import { env } from "../../config/env.js";
+import { logger } from "../../lib/logger.js";
 import { generateOpenAiExplanations } from "./openai.provider.js";
 
 type GenerateInput = {
@@ -10,12 +11,34 @@ type GenerateInput = {
 };
 
 export async function generateLabExplanations(input: GenerateInput): Promise<LabExplanation[]> {
-  if (env.AI_PROVIDER === "openai" && env.OPENAI_API_KEY) {
-    try {
-      return await generateOpenAiExplanations(input);
-    } catch (error) {
-      console.error("OpenAI explanation failed. Falling back to deterministic explanations.", error);
+  if (env.AI_PROVIDER === "openai") {
+    if (env.OPENAI_API_KEY) {
+      try {
+        return await generateOpenAiExplanations(input);
+      } catch (error) {
+        if (env.AI_FALLBACK_POLICY === "fail") {
+          logger.error(
+            { event: "ai_provider_failure", provider: "openai", policy: "fail", err: error },
+            "OpenAI explanation failed. Failing closed per AI_FALLBACK_POLICY=fail."
+          );
+          throw error;
+        }
+        logger.warn(
+          { event: "ai_fallback_triggered", provider: "openai", policy: "allow", err: error },
+          "OpenAI explanation failed — falling back to mock. Set AI_FALLBACK_POLICY=fail to error instead."
+        );
+      }
+    } else {
+      logger.warn(
+        { event: "ai_provider_misconfigured", provider: "openai" },
+        "AI_PROVIDER=openai but OPENAI_API_KEY is not set — using mock explanations."
+      );
     }
+  } else {
+    logger.warn(
+      { event: "ai_provider_mock" },
+      "AI_PROVIDER=mock — serving deterministic explanations. Set AI_PROVIDER=openai for production use."
+    );
   }
 
   return input.classifiedResults.map((result) => labExplanationSchema.parse({
@@ -29,8 +52,9 @@ export async function generateLabExplanations(input: GenerateInput): Promise<Lab
 }
 
 function buildMockExplanation(result: LabExplanation) {
+  const unitSuffix = result.unit ? ` ${result.unit}` : "";
   const rangeText = result.referenceRange?.low !== undefined && result.referenceRange?.high !== undefined
-    ? `The provided reference range is ${result.referenceRange.low} to ${result.referenceRange.high}${result.unit ? ` ${result.unit}` : ""}.`
+    ? `The provided reference range is ${result.referenceRange.low} to ${result.referenceRange.high}${unitSuffix}.`
     : "No complete reference range was provided, so the status may be limited.";
 
   if (result.status === "normal") {
