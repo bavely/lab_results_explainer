@@ -2,6 +2,7 @@ import type { CombinationFlag, LabExplanation, PatientContext } from "@lab-resul
 import { labExplanationSchema } from "@lab-results/shared";
 import { env } from "../../config/env.js";
 import { logger } from "../../lib/logger.js";
+import { generateAzureFoundryAgentExplanations } from "./azure-foundry-agent.provider.js";
 import { generateOpenAiExplanations } from "./openai.provider.js";
 
 type GenerateInput = {
@@ -32,6 +33,29 @@ export async function generateLabExplanations(input: GenerateInput): Promise<Lab
       logger.warn(
         { event: "ai_provider_misconfigured", provider: "openai" },
         "AI_PROVIDER=openai but OPENAI_API_KEY is not set — using mock explanations."
+      );
+    }
+  } else if (env.AI_PROVIDER === "azure_foundry_agent") {
+    if (env.AZURE_AI_PROJECT_ENDPOINT && env.AZURE_AI_AGENT_NAME && env.AZURE_AI_AGENT_VERSION) {
+      try {
+        return await generateAzureFoundryAgentExplanations(input);
+      } catch (error) {
+        if (env.AI_FALLBACK_POLICY === "fail") {
+          logger.error(
+            { event: "ai_provider_failure", provider: "azure_foundry_agent", policy: "fail", err: error },
+            "Azure Foundry Agent explanation failed. Failing closed per AI_FALLBACK_POLICY=fail."
+          );
+          throw error;
+        }
+        logger.warn(
+          { event: "ai_fallback_triggered", provider: "azure_foundry_agent", policy: "allow", err: error },
+          "Azure Foundry Agent explanation failed — falling back to mock. Set AI_FALLBACK_POLICY=fail to error instead."
+        );
+      }
+    } else {
+      logger.warn(
+        { event: "ai_provider_misconfigured", provider: "azure_foundry_agent" },
+        "AI_PROVIDER=azure_foundry_agent but one or more required Azure variables are missing — using mock explanations."
       );
     }
   } else {
