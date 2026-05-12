@@ -14,7 +14,7 @@ export async function generateOpenAiExplanations(input: GenerateInput): Promise<
   const client = new OpenAI( {baseURL: "https://meditrackai-openai.openai.azure.com/openai/v1/", apiKey: env.OPENAI_API_KEY });
 
   const completion = await client.chat.completions.create({
-    model: "gpt-4o-mini",
+    model: env.AZURE_OPENAI_DEPLOYMENT,
     temperature: 0.2,
     response_format: { type: "json_object" },
     messages: [
