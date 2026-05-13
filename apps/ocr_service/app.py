@@ -15,6 +15,10 @@ load_dotenv()
 APP_PORT = int(os.getenv("OCR_SERVICE_PORT", "5051"))
 MAX_FILE_MB = int(os.getenv("OCR_MAX_FILE_MB", "10"))
 UPSCALE_FACTOR = float(os.getenv("OCR_UPSCALE_FACTOR", "1.8"))
+TESSERACT_CMD = os.getenv("OCR_TESSERACT_CMD")
+
+if TESSERACT_CMD:
+    pytesseract.pytesseract.tesseract_cmd = TESSERACT_CMD
 
 app = Flask(__name__)
 CORS(app)
@@ -136,7 +140,20 @@ def enhance() -> Any:
         enhanced_path = tmp.name
 
     ocr_config = "--oem 3 --psm 6"
-    text = pytesseract.image_to_string(enhanced, config=ocr_config)
+
+    try:
+        text = pytesseract.image_to_string(enhanced, config=ocr_config)
+    except pytesseract.TesseractNotFoundError:
+        return (
+            jsonify(
+                {
+                    "error": "Tesseract OCR executable not found",
+                    "hint": "Install Tesseract and add it to PATH, or set OCR_TESSERACT_CMD to the full executable path.",
+                    "configuredCommand": TESSERACT_CMD or "tesseract",
+                }
+            ),
+            503,
+        )
 
     return jsonify(
         {
