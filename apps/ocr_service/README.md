@@ -54,3 +54,15 @@ curl -X POST http://localhost:5051/enhance \
 - `OCR_SERVICE_PORT` (default `5051`)
 - `OCR_MAX_FILE_MB` (default `10`)
 - `OCR_UPSCALE_FACTOR` (default `1.8`)
+- `OCR_TESSERACT_CMD` (optional absolute path to the Tesseract executable, useful on Windows)
+
+
+## Tesseract dependency
+
+This service requires the native **Tesseract OCR** binary in addition to the `pytesseract` Python package.
+
+- On Windows, install Tesseract and either:
+  - add the install directory (for example `C:\Program Files\Tesseract-OCR`) to `PATH`, or
+  - set `OCR_TESSERACT_CMD` to the full executable path (for example `C:\Program Files\Tesseract-OCR\tesseract.exe`).
+
+If Tesseract is missing, `POST /enhance` returns HTTP `503` with a setup hint instead of a Flask stack trace.
