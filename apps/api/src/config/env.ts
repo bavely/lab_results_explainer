@@ -8,6 +8,7 @@ const envSchema = z.object({
   OPENAI_API_KEY: z.string().optional(),
   OPENAI_BASE_URL: z.string().url().optional(),
   OPENAI_MODEL: z.string().optional(),
+  OPENAI_TIMEOUT_MS: z.coerce.number().int().positive().default(20000),
   AZURE_OPENAI_DEPLOYMENT: z.string().default("gpt-4o-mini"),
   AZURE_AI_PROJECT_ENDPOINT: z.string().url().optional(),
   AZURE_AI_AGENT_NAME: z.string().optional(),

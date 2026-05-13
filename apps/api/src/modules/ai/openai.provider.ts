@@ -18,40 +18,45 @@ export async function generateOpenAiExplanations(input: GenerateInput): Promise<
 
   const model = env.OPENAI_MODEL ?? env.AZURE_OPENAI_DEPLOYMENT;
 
-  const completion = await client.chat.completions.create({
-    model,
-    response_format: { type: "json_object" },
-    messages: [
-      { role: "system", content: LAB_EXPLAINER_SYSTEM_PROMPT },
-      {
-        role: "user",
-        content: JSON.stringify({
-          task: "Explain the classified lab results in patient-friendly language. Do not change the status values assigned by the backend.",
-          patientContext: input.patientContext ?? {},
-          classifiedResults: input.classifiedResults,
-          combinationFlags: input.combinationFlags,
-          requiredShape: {
-            results: [
-              {
-                testName: "string",
-                normalizedName: "string",
-                value: "number",
-                unit: "string",
-                referenceRange: { low: "number optional", high: "number optional", text: "string optional" },
-                status: "normal | low | high | borderline | unknown",
-                severity: "none | mild | moderate | critical | unknown",
-                plainLanguageExplanation: "string",
-                possibleGeneralCauses: ["string"],
-                followUpQuestions: ["string"],
-                shouldDiscussWithClinician: "boolean",
-                disclaimer: "string"
-              }
-            ]
-          }
-        })
-      }
-    ]
-  });
+  const completion = await Promise.race([
+    client.chat.completions.create({
+      model,
+      response_format: { type: "json_object" },
+      messages: [
+        { role: "system", content: LAB_EXPLAINER_SYSTEM_PROMPT },
+        {
+          role: "user",
+          content: JSON.stringify({
+            task: "Explain the classified lab results in patient-friendly language. Do not change the status values assigned by the backend.",
+            patientContext: input.patientContext ?? {},
+            classifiedResults: input.classifiedResults,
+            combinationFlags: input.combinationFlags,
+            requiredShape: {
+              results: [
+                {
+                  testName: "string",
+                  normalizedName: "string",
+                  value: "number",
+                  unit: "string",
+                  referenceRange: { low: "number optional", high: "number optional", text: "string optional" },
+                  status: "normal | low | high | borderline | unknown",
+                  severity: "none | mild | moderate | critical | unknown",
+                  plainLanguageExplanation: "string",
+                  possibleGeneralCauses: ["string"],
+                  followUpQuestions: ["string"],
+                  shouldDiscussWithClinician: "boolean",
+                  disclaimer: "string"
+                }
+              ]
+            }
+          })
+        }
+      ]
+    }),
+    new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error(`OpenAI request timed out after ${env.OPENAI_TIMEOUT_MS}ms`)), env.OPENAI_TIMEOUT_MS);
+    })
+  ]);
 
   const raw = completion.choices[0]?.message?.content;
   if (!raw) throw new Error("AI provider returned an empty response");
