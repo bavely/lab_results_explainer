@@ -1,5 +1,7 @@
 import type { ExtractedLabResult, ReferenceRange } from "@lab-results/shared";
 import { cleanPHI } from "../../middleware/PHICleaner.js";
+import { OpenAI } from "openai";
+import { env } from "../../config/env.js";
 
 type ParsedValue = {
   value?: number;
@@ -38,9 +40,19 @@ const methodWords = [
   "Enzymatic"
 ];
 
-export function extractLabValuesFromText(text: string): ExtractedLabResult[] {
+export async function extractLabValuesFromText(text: string): Promise<ExtractedLabResult[]> {
   const normalizedText = normalizeText(text);
-  console.log("Extracting lab values from text. Normalized text:", normalizedText);
+  console.log("Extracting lab values from text via LLM. Normalized text:", normalizedText);
+
+  const llmResults = await extractLabValuesWithLlm(normalizedText);
+  if (llmResults.length > 0) {
+    return dedupeResults(llmResults);
+  }
+
+  return extractLabValuesWithHeuristics(normalizedText);
+}
+
+function extractLabValuesWithHeuristics(normalizedText: string): ExtractedLabResult[] {
 
   const lines = normalizedText
     .split(/\r?\n/)
@@ -63,6 +75,97 @@ export function extractLabValuesFromText(text: string): ExtractedLabResult[] {
   }
 
   return dedupeResults(results);
+}
+
+async function extractLabValuesWithLlm(normalizedText: string): Promise<ExtractedLabResult[]> {
+  if (!env.OPENAI_API_KEY) return [];
+
+  try {
+    const client = new OpenAI({
+      apiKey: env.OPENAI_API_KEY,
+      ...(env.OPENAI_BASE_URL ? { baseURL: env.OPENAI_BASE_URL } : {})
+    });
+    const model = env.OPENAI_MODEL ?? env.AZURE_OPENAI_DEPLOYMENT;
+    if (!model) return [];
+
+    const completion = await client.chat.completions.create({
+      model,
+      response_format: { type: "json_object" },
+      messages: [
+        {
+          role: "system",
+          content:
+            "You extract lab report rows from noisy OCR text. Return strict JSON object with key results[]. Only include true lab rows with a test name and value. Ignore headers, metadata, dates, times, IDs, and administrative fields."
+        },
+        {
+          role: "user",
+          content: JSON.stringify({
+            task: "Extract lab test rows from normalizedText.",
+            normalizedText,
+            requiredShape: {
+              results: [
+                {
+                  testName: "string",
+                  value: "number optional",
+                  valueText: "string",
+                  comparator: "< or > optional",
+                  unit: "string optional",
+                  flag: "H or L optional",
+                  referenceRange: { low: "number optional", high: "number optional", text: "string optional" }
+                }
+              ]
+            }
+          })
+        }
+      ]
+    });
+
+    const raw = completion.choices[0]?.message?.content;
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as { results?: unknown[] };
+    if (!Array.isArray(parsed.results)) return [];
+
+    return parsed.results
+      .map((item) => normalizeLlmResult(item))
+      .filter((item): item is ExtractedLabResult => Boolean(item));
+  } catch (error) {
+    console.warn("LLM extraction failed, falling back to heuristic parsing", error);
+    return [];
+  }
+}
+
+function normalizeLlmResult(item: unknown): ExtractedLabResult | null {
+  if (!item || typeof item !== "object") return null;
+  const row = item as Record<string, unknown>;
+  const testName = typeof row.testName === "string" ? row.testName.trim() : "";
+  const valueText = typeof row.valueText === "string" ? row.valueText.trim() : "";
+  if (!testName || !valueText) return null;
+
+  const numericValue = typeof row.value === "number" && Number.isFinite(row.value) ? row.value : undefined;
+  const comparator = row.comparator === "<" || row.comparator === ">" ? row.comparator : undefined;
+  const unit = typeof row.unit === "string" ? row.unit : "";
+  const flag = row.flag === "H" || row.flag === "L" ? row.flag : undefined;
+  const rr = row.referenceRange as Record<string, unknown> | undefined;
+
+  return {
+    testName,
+    value: numericValue,
+    valueText,
+    comparator,
+    unit,
+    flag,
+    referenceRange: {
+      low: typeof rr?.low === "number" ? rr.low : undefined,
+      high: typeof rr?.high === "number" ? rr.high : undefined,
+      text: typeof rr?.text === "string" ? rr.text : undefined
+    },
+    source: "pdf",
+    isAnalyzable: typeof numericValue === "number",
+    notes:
+      typeof numericValue === "number"
+        ? "Extracted by LLM from normalized PDF/OCR text. Please review before analysis."
+        : "Extracted qualitative value by LLM from normalized PDF/OCR text. Review manually; it will not be included in numeric range analysis."
+  };
 }
 
 function extractResultForTest(testName: string, firstLine: string, windowLines: string[]): ExtractedLabResult | null {
