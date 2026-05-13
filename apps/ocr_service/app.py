@@ -154,7 +154,7 @@ def enhance() -> Any:
             ),
             503,
         )
-
+    print (f"OCR extracted text:\n{text}\n--- End of OCR output ---")
     return jsonify(
         {
             "text": text,

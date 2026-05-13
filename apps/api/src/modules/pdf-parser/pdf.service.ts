@@ -128,6 +128,7 @@ async function runOcrOnImage(buffer: Buffer): Promise<{ text: string; confidence
   }
 
   const result = await Tesseract.recognize(buffer, "eng");
+  console.log("Tesseract OCR confidence:==================>", result);
   return {
     text: result.data.text ?? "",
     confidence: Number((result.data.confidence / 100).toFixed(3)),
@@ -149,7 +150,7 @@ async function requestEnhancedOcr(buffer: Buffer): Promise<{ text: string } | nu
       method: "POST",
       body: formData
     });
-
+console.log("OCR enhancer response status:", response);
     if (!response.ok) {
       return null;
     }

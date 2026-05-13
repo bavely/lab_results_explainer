@@ -1,5 +1,5 @@
 import type { ExtractedLabResult, ReferenceRange } from "@lab-results/shared";
-
+import {cleanPHI} from "../../middleware/PHICleaner.js";
 type TestDefinition = {
   displayName: string;
   aliases: string[];
@@ -161,11 +161,11 @@ const sortedDefinitions = testDefinitions
   .sort((a, b) => b.aliases[0].length - a.aliases[0].length);
 
 export function extractLabValuesFromText(text: string): ExtractedLabResult[] {
+  console.log("Extracting lab values from text. Normalized text:", normalizeText(text));
   const lines = normalizeText(text)
     .split(/\r?\n/)
     .map((line) => normalizeLine(line))
     .filter(Boolean);
-
   const results: ExtractedLabResult[] = [];
 
   for (let index = 0; index < lines.length; index += 1) {
@@ -490,7 +490,7 @@ function dedupeResults(results: ExtractedLabResult[]) {
 }
 
 function normalizeText(text: string) {
-  return text
+  return cleanPHI(text)
     .replace(/\u00a0/g, " ")
     .replace(/[–—]/g, "-")
     .replace(/µ/g, "micro")
