@@ -18,7 +18,7 @@ export async function parseLabReportFile(buffer: Buffer, mimetype: string): Prom
     const directText = (parsed.text ?? "").trim();
 
     if (directText.length > 30) {
-      const directResults = extractLabValuesFromText(directText);
+      const directResults = await extractLabValuesFromText(directText);
       if (directResults.length >= 2) {
         return {
           extractedResults: directResults,
@@ -30,7 +30,7 @@ export async function parseLabReportFile(buffer: Buffer, mimetype: string): Prom
 
     const ocr = await extractTextFromPdfWithOcr(buffer);
     return {
-      extractedResults: extractLabValuesFromText(ocr.text),
+      extractedResults: await extractLabValuesFromText(ocr.text),
       confidence: ocr.confidence,
       source: ocr.source
     };
@@ -38,7 +38,7 @@ export async function parseLabReportFile(buffer: Buffer, mimetype: string): Prom
 
   const ocr = await runOcrOnImage(buffer);
   return {
-    extractedResults: extractLabValuesFromText(ocr.text),
+    extractedResults: await extractLabValuesFromText(ocr.text),
     confidence: ocr.confidence,
     source: ocr.source
   };
