@@ -504,7 +504,8 @@ function normalizeLine(line: string) {
     .replace(/\s*:\s*/g, ": ")
     .replace(/(\d)\s*-\s*(\d)/g, "$1 - $2")
     .replace(/<\s+/g, "<")
-    .replace(/>\s+/g, ">");
+    .replace(/>\s+/g, ">")
+    .replace(/\b(\d)\s+(\d)\b/g, "$1.$2");
 }
 
 function escapeRegExp(value: string) {
