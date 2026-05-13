@@ -17,11 +17,14 @@ export async function parseLabReportFile(buffer: Buffer, mimetype: string): Prom
     const directText = (parsed.text ?? "").trim();
 
     if (directText.length > 30) {
-      return {
-        extractedResults: extractLabValuesFromText(directText),
-        confidence: 0.95,
-        source: "pdf-text"
-      };
+      const directResults = extractLabValuesFromText(directText);
+      if (directResults.length >= 2) {
+        return {
+          extractedResults: directResults,
+          confidence: 0.95,
+          source: "pdf-text"
+        };
+      }
     }
 
     const ocr = await extractTextFromPdfWithOcr(buffer);
@@ -68,7 +71,7 @@ async function loadPdfOcrRenderer(): Promise<((buffer: Buffer) => Promise<{ text
 
       for (let pageNo = 1; pageNo <= maxPages; pageNo += 1) {
         const page = await pdf.getPage(pageNo);
-        const viewport = page.getViewport({ scale: 2.0 });
+        const viewport = page.getViewport({ scale: 2 });
         const canvas = createCanvas(Math.ceil(viewport.width), Math.ceil(viewport.height));
         const context = canvas.getContext("2d");
         await page.render({ canvasContext: context as any, viewport }).promise;

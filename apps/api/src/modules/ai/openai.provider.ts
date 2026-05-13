@@ -20,7 +20,6 @@ export async function generateOpenAiExplanations(input: GenerateInput): Promise<
 
   const completion = await client.chat.completions.create({
     model,
-    temperature: 0.2,
     response_format: { type: "json_object" },
     messages: [
       { role: "system", content: LAB_EXPLAINER_SYSTEM_PROMPT },
