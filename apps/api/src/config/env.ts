@@ -17,7 +17,8 @@ const envSchema = z.object({
   AI_FALLBACK_POLICY: z.enum(["fail", "allow"]).default("allow"),
   MAX_UPLOAD_MB: z.coerce.number().default(10),
   DELETE_UPLOADS_AFTER_PARSE: z.coerce.boolean().default(true),
-  CLIENT_ORIGIN: z.string().default("http://localhost:5173")
+  CLIENT_ORIGIN: z.string().default("http://localhost:5173"),
+  OCR_ENHANCER_URL: z.string().url().optional()
 });
 
 export const env = envSchema.parse(process.env);
