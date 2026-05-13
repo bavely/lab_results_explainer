@@ -36,8 +36,18 @@ export async function analyzeLabResults(payload: AnalyzeLabsRequest): Promise<An
     combinationFlags
   });
 
-  const normalCount = explainedResults.filter((result) => result.status === "normal").length;
-  const abnormalCount = explainedResults.filter((result) => ["low", "high", "borderline"].includes(result.status)).length;
+  let normalCount = 0;
+  let abnormalCount = 0;
+  for (const result of explainedResults) {
+    if (result.status === "normal") {
+      normalCount += 1;
+      continue;
+    }
+
+    if (result.status === "low" || result.status === "high" || result.status === "borderline") {
+      abnormalCount += 1;
+    }
+  }
   const followUpRecommended = abnormalCount > 0 || combinationFlags.length > 0;
 
   const response: AnalyzeLabsResponse = {

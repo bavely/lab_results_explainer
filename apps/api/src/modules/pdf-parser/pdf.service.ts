@@ -69,18 +69,26 @@ async function loadPdfOcrRenderer(): Promise<((buffer: Buffer) => Promise<{ text
       let pagesProcessed = 0;
       const maxPages = Math.min(pdf.numPages, 5);
 
-      for (let pageNo = 1; pageNo <= maxPages; pageNo += 1) {
-        const page = await pdf.getPage(pageNo);
-        const viewport = page.getViewport({ scale: 2 });
-        const canvas = createCanvas(Math.ceil(viewport.width), Math.ceil(viewport.height));
-        const context = canvas.getContext("2d");
-        await page.render({ canvasContext: context as any, viewport }).promise;
+      const pageNumbers = Array.from({ length: maxPages }, (_, idx) => idx + 1);
+      const pageChunks = chunk(pageNumbers, 2);
 
-        const ocr = await runOcrOnImage(canvas.toBuffer("image/png"));
-        merged += `
-${ocr.text}`;
-        totalConfidence += ocr.confidence;
-        pagesProcessed += 1;
+      for (const pageChunk of pageChunks) {
+        const chunkOcr = await Promise.all(
+          pageChunk.map(async (pageNo) => {
+            const page = await pdf.getPage(pageNo);
+            const viewport = page.getViewport({ scale: 2 });
+            const canvas = createCanvas(Math.ceil(viewport.width), Math.ceil(viewport.height));
+            const context = canvas.getContext("2d");
+            await page.render({ canvasContext: context as any, viewport }).promise;
+            return runOcrOnImage(canvas.toBuffer("image/png"));
+          })
+        );
+
+        for (const ocr of chunkOcr) {
+          merged += `\n${ocr.text}`;
+          totalConfidence += ocr.confidence;
+          pagesProcessed += 1;
+        }
       }
 
       return {
@@ -91,6 +99,14 @@ ${ocr.text}`;
   } catch {
     return null;
   }
+}
+
+function chunk<T>(items: T[], size: number): T[][] {
+  const chunks: T[][] = [];
+  for (let index = 0; index < items.length; index += size) {
+    chunks.push(items.slice(index, index + size));
+  }
+  return chunks;
 }
 
 async function runOcrOnImage(buffer: Buffer): Promise<{ text: string; confidence: number }> {
