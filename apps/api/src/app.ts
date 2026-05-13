@@ -2,7 +2,7 @@ import cors from "cors";
 import express from "express";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
-import pinoHttp from "pino-http";
+import { pinoHttp } from "pino-http";
 import { env } from "./config/env.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { labRoutes } from "./modules/lab-analysis/lab.routes.js";
@@ -23,7 +23,7 @@ export function createApp() {
     pinoHttp({
       redact: ["req.headers.authorization", "req.body", "res.body"],
       serializers: {
-        req(req) {
+        req(req: { method?: string; url?: string; remoteAddress?: string }) {
           return {
             method: req.method,
             url: req.url,
