@@ -39,7 +39,12 @@ export function HomePage() {
 
       <section className="grid gap-6 xl:grid-cols-2">
         <LabEntryForm onSubmit={(data) => analyzeMutation.mutate(data)} isSubmitting={analyzeMutation.isPending} />
-        <PdfUploadDropzone onUpload={(file) => uploadMutation.mutate(file)} uploadResult={uploadMutation.data} isUploading={uploadMutation.isPending} />
+        <PdfUploadDropzone
+          onUpload={(file) => uploadMutation.mutate(file)}
+          onAnalyze={(data) => analyzeMutation.mutate(data)}
+          uploadResult={uploadMutation.data}
+          isUploading={uploadMutation.isPending}
+        />
       </section>
 
       {(analyzeMutation.error || uploadMutation.error) && (
