@@ -59,3 +59,28 @@ def parse_lab_pdf(file_bytes: bytes) -> dict:
         "message": "We extracted possible lab values from your report. Please review before generating explanations.",
         "textPreview": preview,
     }
+
+
+def extract_text_from_image_bytes(file_bytes: bytes) -> str:
+    if pytesseract is None or Image is None:
+        return ""
+
+    try:
+        image = Image.open(BytesIO(file_bytes))
+        return pytesseract.image_to_string(image)
+    except Exception:
+        return ""
+
+
+def parse_lab_image(file_bytes: bytes) -> dict:
+    raw_text = extract_text_from_image_bytes(file_bytes)
+    cleaned_text = clean_phi_text(raw_text)
+    extracted = extract_lab_values_from_text(cleaned_text)
+    preview = "\n".join(cleaned_text.splitlines()[:40])
+
+    return {
+        "extractedResults": extracted,
+        "needsReview": True,
+        "message": "We extracted possible lab values from your report. Please review before generating explanations.",
+        "textPreview": preview,
+    }
