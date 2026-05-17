@@ -14,6 +14,17 @@ except ImportError:  # pragma: no cover - optional dependency path
     Image = None
 
 
+def _ocr_is_available() -> bool:
+    if pytesseract is None or Image is None:
+        return False
+
+    try:
+        pytesseract.get_tesseract_version()
+        return True
+    except Exception:
+        return False
+
+
 def _extract_text_with_ocr(page) -> str:
     if pytesseract is None or Image is None:
         return ""
@@ -62,7 +73,7 @@ def parse_lab_pdf(file_bytes: bytes) -> dict:
 
 
 def extract_text_from_image_bytes(file_bytes: bytes) -> str:
-    if pytesseract is None or Image is None:
+    if not _ocr_is_available():
         return ""
 
     try:
@@ -78,9 +89,16 @@ def parse_lab_image(file_bytes: bytes) -> dict:
     extracted = extract_lab_values_from_text(cleaned_text)
     preview = "\n".join(cleaned_text.splitlines()[:40])
 
+    message = "We extracted possible lab values from your report. Please review before generating explanations."
+    if not raw_text.strip():
+        message = (
+            "We could not read text from this image. "
+            "Try a sharper image (higher contrast, no blur) or upload a PDF export from your lab portal."
+        )
+
     return {
         "extractedResults": extracted,
         "needsReview": True,
-        "message": "We extracted possible lab values from your report. Please review before generating explanations.",
+        "message": message,
         "textPreview": preview,
     }

@@ -22,3 +22,12 @@ def test_parse_lab_image_extracts_simple_ocr_lines(monkeypatch):
     second = parsed["extractedResults"][1]
     assert second["normalizedName"] == "wbc"
     assert second["flag"] == "H"
+
+
+def test_parse_lab_image_returns_helpful_message_when_no_text(monkeypatch):
+    monkeypatch.setattr(service, "extract_text_from_image_bytes", lambda _file_bytes: "")
+
+    parsed = service.parse_lab_image(b"fake-image")
+
+    assert parsed["extractedResults"] == []
+    assert "could not read text from this image" in parsed["message"].lower()
