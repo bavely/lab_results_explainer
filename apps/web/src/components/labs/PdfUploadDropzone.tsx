@@ -6,11 +6,12 @@ import type { UploadResponse } from "@/types/labs";
 
 interface PdfUploadDropzoneProps {
   onUpload: (file: File) => void;
+  onAnalyze: (data: { results: UploadResponse["extractedResults"] }) => void;
   uploadResult?: UploadResponse;
   isUploading?: boolean;
 }
 
-export function PdfUploadDropzone({ onUpload, uploadResult, isUploading }: PdfUploadDropzoneProps) {
+export function PdfUploadDropzone({ onUpload, onAnalyze, uploadResult, isUploading }: PdfUploadDropzoneProps) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [fileName, setFileName] = useState<string>("");
 
@@ -75,7 +76,12 @@ export function PdfUploadDropzone({ onUpload, uploadResult, isUploading }: PdfUp
                 <p>No structured values were extracted. This may be a scanned PDF or a layout that needs a custom parser.</p>
               )}
             </div>
-            <Button className="mt-4" variant="outline" disabled={!uploadResult.extractedResults.length}>
+            <Button
+              className="mt-4"
+              variant="outline"
+              disabled={!uploadResult.extractedResults.length}
+              onClick={() => onAnalyze({ results: uploadResult.extractedResults })}
+            >
               Review/edit extracted values — next step
             </Button>
           </div>
