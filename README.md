@@ -1,107 +1,79 @@
-# Lab Results Explainer — Flask + React Starter
+# Lab Results Explainer — Flask + React
 
-A patient-friendly starter application for explaining common lab results in plain language. This version uses:
+A patient-friendly starter application for explaining common lab results in plain language.
 
-- **Frontend:** React, TypeScript, Vite, Tailwind CSS, shadcn-style UI components, react-hook-form, Zod, TanStack Query
+- **Frontend:** React 19, TypeScript, Vite, Tailwind CSS v4, shadcn-style UI, react-hook-form, Zod, TanStack Query
 - **Backend:** Python, Flask, Pydantic, pypdf
-- **Core logic:** deterministic lab-range classification, normalization, combination flags, mock explanations, and an Azure AI Foundry Agent provider
+- **Core logic:** deterministic normalization + range classification, combination risk flags, and AI-generated educational explanations with deterministic fallback
 
-> Educational use only. This application does not provide medical advice, diagnosis, or treatment. Lab results should always be interpreted by a licensed healthcare professional.
+> Educational use only. This application does **not** provide medical advice, diagnosis, or treatment.
 
----
-
-## Project Structure
+## Repository Layout
 
 ```txt
-lab-results-explainer-flask-react-starter/
+.
 ├── apps/
-│   ├── api/                         # Python Flask backend
-│   │   ├── src/
-│   │   │   ├── app.py
-│   │   │   ├── config.py
-│   │   │   ├── modules/
-│   │   │   │   ├── ai/
-│   │   │   │   ├── lab_analysis/
-│   │   │   │   └── pdf_parser/
-│   │   │   └── utils/
-│   │   ├── requirements.txt
-│   │   ├── run.py
-│   │   └── .env.example
-│   │
+│   ├── api/                         # Flask backend
 │   └── web/                         # React frontend
-│       ├── src/
-│       │   ├── components/
-│       │   │   ├── labs/
-│       │   │   ├── layout/
-│       │   │   └── ui/
-│       │   ├── lib/
-│       │   ├── pages/
-│       │   ├── types/
-│       │   ├── App.tsx
-│       │   └── main.tsx
-│       ├── package.json
-│       ├── tailwind.config.ts
-│       └── vite.config.ts
-│
-├── docs/
-│   ├── architecture.md
-│   ├── medical-guardrails.md
-│   └── prompt-design.md
-├── docker-compose.yml
-├── .env.example
+├── docs/                            # Architecture, guardrails, and prompt design docs
+├── docker-compose.yml               # Local full-stack orchestration
+├── package.json                     # Root helper scripts
 └── README.md
 ```
 
----
-
 ## Quick Start
 
-### 1. Start the Flask API
+### 1) Configure environment
+
+From the repository root:
+
+```bash
+cp .env.example .env
+cp apps/api/.env.example apps/api/.env
+cp apps/web/.env.example apps/web/.env
+```
+
+### 2) Run backend API
 
 ```bash
 cd apps/api
 python -m venv .venv
-
-# Windows Git Bash / PowerShell may differ:
 source .venv/bin/activate
-
 pip install -r requirements.txt
-cp .env.example .env
 python run.py
 ```
 
-API runs at:
+API base URL: `http://localhost:4000`
 
-```txt
-http://localhost:4000
+Health endpoint:
+
+```http
+GET /api/health
 ```
 
-Health check:
-
-```txt
-GET http://localhost:4000/api/health
-```
-
-### 2. Start the React app
+### 3) Run web app
 
 ```bash
 cd apps/web
 npm install
-cp .env.example .env
 npm run dev
 ```
 
-Frontend runs at:
+Web URL: `http://localhost:5173`
 
-```txt
-http://localhost:5173
+## Root Convenience Scripts
+
+From repository root:
+
+```bash
+npm run dev:api
+npm run dev:web
+npm run build:web
 ```
 
----
+## API Endpoints
 
-## Main API Endpoints
-
-### Analyze manual lab results
+### Analyze lab values
 
 ```http
 POST /api/labs/analyze
@@ -122,10 +94,7 @@ Example body:
       "testName": "Hemoglobin",
       "value": 11.2,
       "unit": "g/dL",
-      "referenceRange": {
-        "low": 12,
-        "high": 16
-      }
+      "referenceRange": { "low": 12, "high": 16 }
     }
   ]
 }
@@ -138,62 +107,42 @@ POST /api/labs/upload
 Content-Type: multipart/form-data
 ```
 
-Form field:
+Form-data field name: `file`
 
-```txt
-file: lab-report.pdf
-```
+The backend extracts PDF text and returns candidate values for user confirmation before analysis.
 
-The starter extracts raw text with `pypdf`, removes common PHI patterns, and applies a basic regex extractor. It is intentionally conservative and returns candidate values for user review before analysis.
+## AI Provider Behavior
 
----
+Default behavior uses deterministic **mock** explanations so the app works without cloud credentials.
 
-## AI Provider Notes
-
-By default, the backend uses a deterministic **mock explainer** so the app works before Azure authentication is configured.
-
-To use your Azure AI Foundry Agent, set this inside `apps/api/.env`:
+To enable Azure AI Foundry Agent, configure in `apps/api/.env`:
 
 ```env
 AI_PROVIDER=azure_foundry_agent
-AZURE_FOUNDRY_ENDPOINT=https://<resource-name>.services.ai.azure.com/api/projects/<project-name>
-AZURE_FOUNDRY_AGENT_NAME=your-agent-name
+AZURE_FOUNDRY_ENDPOINT=https://<resource>.services.ai.azure.com/api/projects/<project>
+AZURE_FOUNDRY_AGENT_NAME=<agent-name>
 AZURE_FOUNDRY_AGENT_VERSION=2
 ```
 
-The Azure provider is implemented in:
-
-```txt
-apps/api/src/modules/ai/ai_service.py
-```
-
-It uses `DefaultAzureCredential`, so local development can authenticate with Azure CLI:
-
-```bash
-az login
-```
-
-You can also use managed identity in Azure hosting, or service-principal environment variables supported by `DefaultAzureCredential`.
-
-Keep backend classification as the source of truth for low/high/normal status. The Azure agent explains the backend classification; it should not independently decide whether a result is abnormal. If the agent is unavailable or returns invalid JSON, the backend safely falls back to deterministic mock explanations.
-
----
+If the AI call fails or returns invalid output, backend logic falls back to deterministic mock explanations.
 
 ## Safety and Privacy Defaults
 
-- Uploaded PDFs are read in memory and not permanently stored.
-- The PDF parser runs a basic PHI cleaner before returning extracted text snippets.
-- The frontend displays a medical disclaimer.
-- The backend returns educational explanations, not diagnoses.
-- The app avoids collecting name, date of birth, address, insurance ID, or medical record number.
+- Uploaded PDFs are processed in memory (no permanent storage).
+- Basic PHI pattern masking runs during parsing.
+- UI includes explicit educational-use disclaimer.
+- Backend classification is source of truth; AI explains but does not set abnormality status.
 
----
+## Documentation Map
 
-## Recommended Next Steps
+- `docs/architecture.md` — end-to-end architecture and module responsibilities
+- `docs/medical-guardrails.md` — safety boundaries and non-diagnostic constraints
+- `docs/prompt-design.md` — prompt contracts for LLM output
+- `docs/azure-foundry-agent.md` — Azure provider setup details
 
-1. Improve PDF extraction against real sample lab reports.
-2. Add OCR for scanned PDFs.
-3. Add rate limiting and request logging without sensitive values.
-4. Replace mock AI output with structured JSON validation from a real LLM.
-5. Add exportable patient summary PDF.
-6. Add unit tests for classification and combination flags.
+## Suggested Next Improvements
+
+1. Improve extraction accuracy across diverse real-world lab PDF formats.
+2. Add OCR path for scanned/image-only PDF reports.
+3. Add request throttling and structured, non-sensitive observability.
+4. Increase backend test coverage for parsing + normalization edge cases.
