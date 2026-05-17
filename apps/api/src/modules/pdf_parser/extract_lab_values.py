@@ -15,6 +15,37 @@ LAB_LINE_PATTERN = re.compile(
     re.IGNORECASE,
 )
 
+# Alternative layout found in some CBC reports where measured value appears near the end:
+# Hemoglobin g/dL 13.0 - 16.5 Colorimetric 14.5
+LAB_LINE_VALUE_AT_END_PATTERN = re.compile(
+    r"(?P<name>[A-Za-z][A-Za-z0-9()/%\-\s]{1,45}?)\s+"
+    r"(?P<unit>%|mg/dL|g/dL|mmol/L|mIU/L|uIU/mL|ng/mL|pg/mL|fL|million/cmm|/cmm|mm/1hr)?\s*"
+    r"(?P<low>\d+(?:\.\d+)?)\s*[-–—]\s*(?P<high>\d+(?:\.\d+)?)"
+    r"(?:\s+[A-Za-z][A-Za-z\s/.-]{1,40})?\s+"
+    r"(?P<value>[<>]?\d+(?:\.\d+)?)\s*"
+    r"(?P<flag>H|L)?$",
+    re.IGNORECASE,
+)
+
+
+def _candidate_from_match(match: re.Match[str], line: str) -> dict[str, Any]:
+    value_text = match.group("value").replace("<", "").replace(">", "")
+    name = match.group("name").strip(" :-")
+    unit = match.groupdict().get("unit")
+    return {
+        "testName": name,
+        "normalizedName": normalize_test_name(name),
+        "value": float(value_text),
+        "unit": unit,
+        "referenceRange": {
+            "low": float(match.group("low")),
+            "high": float(match.group("high")),
+        },
+        "flag": match.groupdict().get("flag"),
+        "source": "pdf",
+        "rawLine": line,
+    }
+
 
 def extract_lab_values_from_text(text: str) -> list[dict[str, Any]]:
     candidates: list[dict[str, Any]] = []
@@ -25,33 +56,16 @@ def extract_lab_values_from_text(text: str) -> list[dict[str, Any]]:
         if not line or len(line) < 6:
             continue
 
-        match = LAB_LINE_PATTERN.search(line)
+        match = LAB_LINE_PATTERN.search(line) or LAB_LINE_VALUE_AT_END_PATTERN.search(line)
         if not match:
             continue
 
-        value_text = match.group("value").replace("<", "").replace(">", "")
-        name = match.group("name").strip(" :-")
-        unit = match.group("unit")
-        value = float(value_text)
-        key = (normalize_test_name(name), value, unit)
+        candidate = _candidate_from_match(match, line)
+        key = (candidate["normalizedName"], candidate["value"], candidate["unit"])
         if key in seen:
             continue
         seen.add(key)
 
-        candidates.append(
-            {
-                "testName": name,
-                "normalizedName": normalize_test_name(name),
-                "value": value,
-                "unit": unit,
-                "referenceRange": {
-                    "low": float(match.group("low")),
-                    "high": float(match.group("high")),
-                },
-                "flag": match.group("flag"),
-                "source": "pdf",
-                "rawLine": line,
-            }
-        )
+        candidates.append(candidate)
 
     return candidates
