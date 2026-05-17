@@ -73,7 +73,7 @@ export function PdfUploadDropzone({ onUpload, onAnalyze, uploadResult, isUploadi
                   </tbody>
                 </table>
               ) : (
-                <p>No structured values were extracted. This may be a scanned PDF or a layout that needs a custom parser.</p>
+                <p>{uploadResult.message || "No structured values were extracted from this file."}</p>
               )}
             </div>
             <Button
