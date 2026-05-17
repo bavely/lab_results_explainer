@@ -1,14 +1,19 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
-export function Alert({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  return <div role="alert" className={cn("rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900", className)} {...props} />;
-}
+const Alert = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(({ className, ...props }, ref) => (
+  <div ref={ref} role="alert" className={cn("relative w-full rounded-lg border p-4", className)} {...props} />
+));
+Alert.displayName = "Alert";
 
-export function AlertTitle({ className, ...props }: React.HTMLAttributes<HTMLHeadingElement>) {
-  return <h5 className={cn("mb-1 font-semibold", className)} {...props} />;
-}
+const AlertTitle = React.forwardRef<HTMLHeadingElement, React.HTMLAttributes<HTMLHeadingElement>>(({ className, ...props }, ref) => (
+  <h5 ref={ref} className={cn("mb-1 font-medium leading-none tracking-tight", className)} {...props} />
+));
+AlertTitle.displayName = "AlertTitle";
 
-export function AlertDescription({ className, ...props }: React.HTMLAttributes<HTMLParagraphElement>) {
-  return <p className={cn("leading-6", className)} {...props} />;
-}
+const AlertDescription = React.forwardRef<HTMLParagraphElement, React.HTMLAttributes<HTMLParagraphElement>>(({ className, ...props }, ref) => (
+  <div ref={ref} className={cn("text-sm [&_p]:leading-relaxed", className)} {...props} />
+));
+AlertDescription.displayName = "AlertDescription";
+
+export { Alert, AlertTitle, AlertDescription };

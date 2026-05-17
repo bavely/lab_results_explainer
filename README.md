@@ -1,132 +1,199 @@
-# Lab Results Explainer
+# Lab Results Explainer — Flask + React Starter
 
-A patient-friendly AI web application that helps users understand common lab results in plain language. Users can manually enter values such as Hemoglobin, A1C, Cholesterol, TSH, LDL, HDL, Triglycerides, Glucose, Creatinine, and eGFR, or upload a lab report PDF for automatic extraction.
+A patient-friendly starter application for explaining common lab results in plain language. This version uses:
 
-> Medical disclaimer: This project is for educational and portfolio purposes only. It does not provide medical advice, diagnosis, or treatment. Lab results should always be interpreted by a licensed healthcare professional.
+- **Frontend:** React, TypeScript, Vite, Tailwind CSS, shadcn-style UI components, react-hook-form, Zod, TanStack Query
+- **Backend:** Python, Flask, Pydantic, pypdf
+- **Core logic:** deterministic lab-range classification, normalization, combination flags, mock explanations, and an Azure AI Foundry Agent provider
 
-## Tech Stack
+> Educational use only. This application does not provide medical advice, diagnosis, or treatment. Lab results should always be interpreted by a licensed healthcare professional.
 
-### Frontend
+---
 
-- React
-- TypeScript
-- Vite
-- Tailwind CSS
-- shadcn/ui-style components
-- react-hook-form
-- Zod
-- TanStack Query
-- Recharts
-- Lucide React
-
-### Backend
-
-- Node.js
-- TypeScript
-- Express
-- Zod
-- Multer
-- pdf-parse
-- OpenAI API with safe mock fallback
-
-### Deployment
-
-- Docker Compose
-- Nginx reverse proxy
-- DigitalOcean VPS
-- Let's Encrypt SSL
-
-## Features in This Starter
-
-- Manual lab result entry
-- Dynamic result rows
-- Backend classification: normal, low, high, unknown
-- Combination follow-up flags
-- AI explanation service with safe mock fallback
-- PDF upload endpoint with candidate extraction
-- Extracted PDF values review page
-- Results dashboard
-- Range visualization
-- Medical disclaimer UX
-- Docker-ready production setup
-
-## Repository Structure
+## Project Structure
 
 ```txt
-lab-results-explainer/
+lab-results-explainer-flask-react-starter/
 ├── apps/
-│   ├── web/                         # React + Tailwind frontend
-│   └── api/                         # Express backend
-├── packages/
-│   ├── shared/                      # Shared Zod schemas and TypeScript types
-│   └── reference-data/              # Lab aliases and educational metadata
+│   ├── api/                         # Python Flask backend
+│   │   ├── src/
+│   │   │   ├── app.py
+│   │   │   ├── config.py
+│   │   │   ├── modules/
+│   │   │   │   ├── ai/
+│   │   │   │   ├── lab_analysis/
+│   │   │   │   └── pdf_parser/
+│   │   │   └── utils/
+│   │   ├── requirements.txt
+│   │   ├── run.py
+│   │   └── .env.example
+│   │
+│   └── web/                         # React frontend
+│       ├── src/
+│       │   ├── components/
+│       │   │   ├── labs/
+│       │   │   ├── layout/
+│       │   │   └── ui/
+│       │   ├── lib/
+│       │   ├── pages/
+│       │   ├── types/
+│       │   ├── App.tsx
+│       │   └── main.tsx
+│       ├── package.json
+│       ├── tailwind.config.ts
+│       └── vite.config.ts
+│
 ├── docs/
 │   ├── architecture.md
-│   ├── deployment-digitalocean.md
 │   ├── medical-guardrails.md
-│   └── portfolio.md
+│   └── prompt-design.md
 ├── docker-compose.yml
-├── pnpm-workspace.yaml
+├── .env.example
 └── README.md
 ```
 
-## Local Setup
+---
+
+## Quick Start
+
+### 1. Start the Flask API
 
 ```bash
-pnpm install
-cp .env.example apps/api/.env
-pnpm dev
+cd apps/api
+python -m venv .venv
+
+# Windows Git Bash / PowerShell may differ:
+source .venv/bin/activate
+
+pip install -r requirements.txt
+cp .env.example .env
+python run.py
 ```
 
-Frontend:
+API runs at:
+
+```txt
+http://localhost:4000
+```
+
+Health check:
+
+```txt
+GET http://localhost:4000/api/health
+```
+
+### 2. Start the React app
+
+```bash
+cd apps/web
+npm install
+cp .env.example .env
+npm run dev
+```
+
+Frontend runs at:
 
 ```txt
 http://localhost:5173
 ```
 
-Backend:
+---
 
-```txt
-http://localhost:4000/api/health
+## Main API Endpoints
+
+### Analyze manual lab results
+
+```http
+POST /api/labs/analyze
+Content-Type: application/json
 ```
 
-## Build
+Example body:
+
+```json
+{
+  "patientContext": {
+    "age": 35,
+    "sex": "female",
+    "pregnant": false
+  },
+  "results": [
+    {
+      "testName": "Hemoglobin",
+      "value": 11.2,
+      "unit": "g/dL",
+      "referenceRange": {
+        "low": 12,
+        "high": 16
+      }
+    }
+  ]
+}
+```
+
+### Upload PDF lab report
+
+```http
+POST /api/labs/upload
+Content-Type: multipart/form-data
+```
+
+Form field:
+
+```txt
+file: lab-report.pdf
+```
+
+The starter extracts raw text with `pypdf`, removes common PHI patterns, and applies a basic regex extractor. It is intentionally conservative and returns candidate values for user review before analysis.
+
+---
+
+## AI Provider Notes
+
+By default, the backend uses a deterministic **mock explainer** so the app works before Azure authentication is configured.
+
+To use your Azure AI Foundry Agent, set this inside `apps/api/.env`:
+
+```env
+AI_PROVIDER=azure_foundry_agent
+AZURE_FOUNDRY_ENDPOINT=https://<resource-name>.services.ai.azure.com/api/projects/<project-name>
+AZURE_FOUNDRY_AGENT_NAME=your-agent-name
+AZURE_FOUNDRY_AGENT_VERSION=2
+```
+
+The Azure provider is implemented in:
+
+```txt
+apps/api/src/modules/ai/ai_service.py
+```
+
+It uses `DefaultAzureCredential`, so local development can authenticate with Azure CLI:
 
 ```bash
-pnpm build
+az login
 ```
 
-## Docker Local Run
+You can also use managed identity in Azure hosting, or service-principal environment variables supported by `DefaultAzureCredential`.
 
-```bash
-docker compose up -d --build
-```
+Keep backend classification as the source of truth for low/high/normal status. The Azure agent explains the backend classification; it should not independently decide whether a result is abnormal. If the agent is unavailable or returns invalid JSON, the backend safely falls back to deterministic mock explanations.
 
-Frontend container is exposed locally on:
+---
 
-```txt
-http://127.0.0.1:8080
-```
+## Safety and Privacy Defaults
 
-API container is exposed locally on:
+- Uploaded PDFs are read in memory and not permanently stored.
+- The PDF parser runs a basic PHI cleaner before returning extracted text snippets.
+- The frontend displays a medical disclaimer.
+- The backend returns educational explanations, not diagnoses.
+- The app avoids collecting name, date of birth, address, insurance ID, or medical record number.
 
-```txt
-http://127.0.0.1:4000/api/health
-```
+---
 
-## Important Safety Positioning
+## Recommended Next Steps
 
-This app intentionally does **not** diagnose. The backend classifies values using deterministic rules before the LLM explains them. The LLM should explain the backend classification, not independently decide whether a value is medically normal or abnormal.
-
-For a public portfolio demo:
-
-- Do not store uploaded PDFs.
-- Do not store lab values.
-- Do not collect names, DOB, MRN, insurance ID, address, or phone number.
-- Do not log request bodies.
-- Use sample data in the live demo.
-- Add a visible disclaimer on every result page.
-
-## Portfolio Talking Point
-
-> I built a healthcare AI tool that combines deterministic lab-range classification with LLM-generated patient explanations. The system uses medical guardrails, structured JSON validation, privacy-aware PDF handling, and a clean patient-facing React UI to make lab reports easier to understand without making diagnoses.
+1. Improve PDF extraction against real sample lab reports.
+2. Add OCR for scanned PDFs.
+3. Add rate limiting and request logging without sensitive values.
+4. Replace mock AI output with structured JSON validation from a real LLM.
+5. Add exportable patient summary PDF.
+6. Add unit tests for classification and combination flags.

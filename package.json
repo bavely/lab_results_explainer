@@ -1,18 +1,10 @@
 {
-  "name": "lab-results-explainer",
-  "version": "0.1.0",
+  "name": "lab-results-explainer-flask-react-starter",
   "private": true,
-  "description": "Patient-friendly AI lab results explainer built with React, Tailwind CSS, shadcn/ui, Node.js, and OpenAI.",
-  "packageManager": "pnpm@10.0.0",
+  "version": "0.1.0",
   "scripts": {
-    "dev": "pnpm --filter @lab-results/shared build && concurrently --raw --kill-others-on-fail \"pnpm --filter api dev\" \"wait-on tcp:127.0.0.1:4000 -t 30000 && pnpm --filter web dev\"",
-    "build": "pnpm --filter @lab-results/shared build && pnpm --filter api build && pnpm --filter web build",
-    "typecheck": "pnpm -r typecheck",
-    "clean": "rimraf apps/*/dist packages/*/dist"
-  },
-  "devDependencies": {
-    "concurrently": "^9.2.1",
-    "rimraf": "^6.0.1",
-    "wait-on": "^9.0.10"
+    "dev:web": "npm --prefix apps/web run dev",
+    "build:web": "npm --prefix apps/web run build",
+    "dev:api": "cd apps/api && python run.py"
   }
 }

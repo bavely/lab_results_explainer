@@ -1,70 +1,65 @@
-import type { ReactNode } from "react";
+import type React from "react";
 import { useMutation } from "@tanstack/react-query";
-import { ArrowRight, FileText, Keyboard, ShieldCheck, Sparkles } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Activity, BrainCircuit, FileText } from "lucide-react";
 import { MedicalDisclaimer } from "@/components/labs/MedicalDisclaimer";
-import { analyzeLabs } from "@/features/lab-analysis/api";
-import { sampleLabPayload } from "@/features/lab-analysis/sampleData";
+import { LabEntryForm } from "@/components/labs/LabEntryForm";
+import { PdfUploadDropzone } from "@/components/labs/PdfUploadDropzone";
+import { ResultsDashboard } from "@/components/labs/ResultsDashboard";
+import { Card, CardContent } from "@/components/ui/card";
+import { analyzeLabs, uploadLabPdf } from "@/lib/api";
 
 export function HomePage() {
-  const navigate = useNavigate();
-  const sampleMutation = useMutation({
-    mutationFn: analyzeLabs,
-    onSuccess: (data) => navigate("/results", { state: { analysis: data } })
-  });
+  const analyzeMutation = useMutation({ mutationFn: analyzeLabs });
+  const uploadMutation = useMutation({ mutationFn: uploadLabPdf });
 
   return (
-    <div className="space-y-10">
-      <section className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
-        <div>
-          <div className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-sm font-medium text-blue-700">
-            <Sparkles className="h-4 w-4" /> Healthcare AI portfolio project
+    <div className="space-y-8">
+      <section className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
+        <div className="space-y-5">
+          <div className="inline-flex rounded-full border bg-white px-3 py-1 text-sm font-medium text-blue-700 shadow-sm">
+            Flask + React + Tailwind + shadcn-style UI
           </div>
-          <h1 className="mt-6 max-w-3xl text-4xl font-bold tracking-tight text-slate-950 sm:text-5xl">
-            Explain lab results in plain language without making diagnoses.
-          </h1>
-          <p className="mt-5 max-w-2xl text-lg leading-8 text-slate-600">
-            A full-stack demo that combines deterministic lab-range classification, PDF extraction, combination flags, and safe AI-generated explanations.
-          </p>
-          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <Button size="lg" onClick={() => navigate("/manual")}>
-              Start manual entry <ArrowRight className="h-4 w-4" />
-            </Button>
-            <Button size="lg" variant="outline" onClick={() => navigate("/upload")}>
-              Upload PDF
-            </Button>
-            <Button size="lg" variant="secondary" disabled={sampleMutation.isPending} onClick={() => sampleMutation.mutate(sampleLabPayload)}>
-              {sampleMutation.isPending ? "Loading sample..." : "Use sample data"}
-            </Button>
+          <div>
+            <h1 className="text-4xl font-bold tracking-tight text-slate-950 sm:text-5xl">Understand lab results in plain language.</h1>
+            <p className="mt-4 max-w-2xl text-lg leading-8 text-slate-600">
+              Enter common lab values or upload a report PDF. The backend classifies values using deterministic rules first, then returns patient-friendly educational explanations.
+            </p>
           </div>
+          <MedicalDisclaimer />
         </div>
 
-        <Card className="bg-gradient-to-br from-white to-blue-50">
-          <CardHeader>
-            <CardTitle>What this demonstrates</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <Feature icon={<Keyboard className="h-5 w-5" />} title="React form architecture" text="Dynamic lab rows, validation, and patient-friendly data entry." />
-            <Feature icon={<FileText className="h-5 w-5" />} title="PDF parsing workflow" text="Upload, extract, preview, correct, then analyze." />
-            <Feature icon={<ShieldCheck className="h-5 w-5" />} title="Medical guardrails" text="Rules classify first; AI explains without diagnosing." />
+        <Card className="bg-gradient-to-br from-blue-600 to-cyan-600 text-white">
+          <CardContent className="grid gap-4 p-6">
+            <Feature icon={<Activity />} title="Rule-based classification" text="Low, high, normal, and unknown statuses are calculated before AI explanations." />
+            <Feature icon={<BrainCircuit />} title="AI-ready explanation layer" text="Mock output works immediately. OpenAI JSON mode scaffold is included for later." />
+            <Feature icon={<FileText />} title="Privacy-aware PDF parsing" text="Uploads are parsed in memory and common PHI patterns are redacted from extracted text." />
           </CardContent>
         </Card>
       </section>
 
-      <MedicalDisclaimer />
+      <section className="grid gap-6 xl:grid-cols-2">
+        <LabEntryForm onSubmit={(data) => analyzeMutation.mutate(data)} isSubmitting={analyzeMutation.isPending} />
+        <PdfUploadDropzone onUpload={(file) => uploadMutation.mutate(file)} uploadResult={uploadMutation.data} isUploading={uploadMutation.isPending} />
+      </section>
+
+      {(analyzeMutation.error || uploadMutation.error) && (
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          {analyzeMutation.error?.message || uploadMutation.error?.message}
+        </div>
+      )}
+
+      {analyzeMutation.data && <ResultsDashboard data={analyzeMutation.data} />}
     </div>
   );
 }
 
-function Feature({ icon, title, text }: { icon: ReactNode; title: string; text: string }) {
+function Feature({ icon, title, text }: { icon: React.ReactNode; title: string; text: string }) {
   return (
-    <div className="flex gap-3 rounded-2xl border border-slate-200 bg-white p-4">
-      <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-blue-50 text-blue-700">{icon}</div>
+    <div className="flex gap-3 rounded-2xl bg-white/10 p-4 backdrop-blur">
+      <div className="mt-1 text-white [&_svg]:h-5 [&_svg]:w-5">{icon}</div>
       <div>
-        <h3 className="font-semibold text-slate-950">{title}</h3>
-        <p className="mt-1 text-sm leading-6 text-slate-600">{text}</p>
+        <h3 className="font-semibold">{title}</h3>
+        <p className="mt-1 text-sm leading-6 text-blue-50">{text}</p>
       </div>
     </div>
   );
