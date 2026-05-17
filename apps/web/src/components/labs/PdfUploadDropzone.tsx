@@ -24,8 +24,8 @@ export function PdfUploadDropzone({ onUpload, onAnalyze, uploadResult, isUploadi
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Upload PDF report</CardTitle>
-        <CardDescription>Upload a text-based lab report PDF. Extracted values should be reviewed before analysis.</CardDescription>
+        <CardTitle>Upload lab report</CardTitle>
+        <CardDescription>Upload a lab report PDF, PNG, or JPG. Extracted values should be reviewed before analysis.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <button
@@ -39,10 +39,10 @@ export function PdfUploadDropzone({ onUpload, onAnalyze, uploadResult, isUploadi
           className="flex w-full flex-col items-center justify-center rounded-2xl border border-dashed border-blue-300 bg-blue-50/50 p-10 text-center transition hover:bg-blue-50"
         >
           <FileUp className="mb-3 h-8 w-8 text-blue-700" />
-          <span className="font-semibold text-slate-900">Drop a PDF here or click to browse</span>
+          <span className="font-semibold text-slate-900">Drop a PDF/PNG/JPG here or click to browse</span>
           <span className="mt-1 text-sm text-slate-500">Maximum size is controlled by the Flask API.</span>
         </button>
-        <input ref={inputRef} type="file" accept="application/pdf" className="hidden" onChange={(event) => handleFile(event.target.files?.[0])} />
+        <input ref={inputRef} type="file" accept="application/pdf,image/png,image/jpeg" className="hidden" onChange={(event) => handleFile(event.target.files?.[0])} />
         {fileName && <p className="text-sm text-slate-600">Selected: {fileName}</p>}
         {isUploading && <p className="text-sm text-blue-700">Uploading and parsing...</p>}
 
