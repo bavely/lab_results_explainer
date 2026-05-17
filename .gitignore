@@ -1,12 +1,22 @@
-node_modules
-.DS_Store
-dist
-build
+# Python
+__pycache__/
+*.py[cod]
+.venv/
 .env
-.env.*
-!.env.example
-uploads
-tmp
-coverage
-.vite
-*.log
+.env.local
+.pytest_cache/
+
+# Node
+node_modules/
+dist/
+.vite/
+*.local
+
+# OS / IDE
+.DS_Store
+.vscode/
+.idea/
+
+# Uploads / temporary files
+uploads/
+tmp/

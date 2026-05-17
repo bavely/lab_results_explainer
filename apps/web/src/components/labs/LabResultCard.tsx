@@ -1,37 +1,60 @@
-import type { LabExplanation } from "@lab-results/shared";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { labStatusLabels, labStatusStyles } from "@/lib/statusStyles";
-import { RangeIndicator } from "./RangeIndicator";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { RangeIndicator } from "@/components/labs/RangeIndicator";
+import type { LabExplanation } from "@/types/labs";
 
-export function LabResultCard({ result }: { result: LabExplanation }) {
+const statusVariant: Record<string, "normal" | "low" | "high" | "unknown"> = {
+  normal: "normal",
+  low: "low",
+  high: "high",
+  borderline: "low",
+  unknown: "unknown",
+};
+
+interface LabResultCardProps {
+  result: LabExplanation;
+}
+
+export function LabResultCard({ result }: LabResultCardProps) {
   return (
     <Card>
-      <CardHeader>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+      <CardHeader className="pb-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <CardTitle>{result.testName}</CardTitle>
-            <p className="mt-1 text-sm text-slate-500">
-              {result.value} {result.unit} · {result.referenceRange?.low ?? "?"} - {result.referenceRange?.high ?? "?"}
-            </p>
+            <CardTitle className="text-xl">{result.testName}</CardTitle>
+            <CardDescription>
+              Value: <span className="font-medium text-slate-800">{result.value} {result.unit}</span>
+            </CardDescription>
           </div>
-          <Badge className={labStatusStyles[result.status]}>{labStatusLabels[result.status]}</Badge>
+          <div className="flex gap-2">
+            <Badge variant={statusVariant[result.status] ?? "unknown"}>{result.status}</Badge>
+            <Badge variant="outline">{result.severity}</Badge>
+          </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-5">
-        <RangeIndicator value={result.value} range={result.referenceRange} />
-        <p className="leading-7 text-slate-700">{result.plainLanguageExplanation}</p>
+        <p className="text-sm leading-6 text-slate-700">{result.plainLanguageExplanation}</p>
 
-        {result.followUpQuestions.length > 0 && (
-          <div className="rounded-2xl bg-slate-50 p-4">
-            <h4 className="font-semibold text-slate-900">Questions to ask your clinician</h4>
-            <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-slate-600">
+        <RangeIndicator value={result.value} low={result.referenceRange?.low} high={result.referenceRange?.high} />
+
+        <div className="grid gap-4 md:grid-cols-2">
+          <div>
+            <h4 className="mb-2 text-sm font-semibold text-slate-900">General context</h4>
+            <ul className="list-disc space-y-1 pl-5 text-sm text-slate-600">
+              {result.possibleGeneralCauses.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+          </div>
+          <div>
+            <h4 className="mb-2 text-sm font-semibold text-slate-900">Questions to ask</h4>
+            <ul className="list-disc space-y-1 pl-5 text-sm text-slate-600">
               {result.followUpQuestions.map((question) => (
                 <li key={question}>{question}</li>
               ))}
             </ul>
           </div>
-        )}
+        </div>
       </CardContent>
     </Card>
   );

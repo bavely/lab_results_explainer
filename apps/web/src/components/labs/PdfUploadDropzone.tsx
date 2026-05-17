@@ -1,47 +1,85 @@
-import { UploadCloud } from "lucide-react";
+import { FileUp } from "lucide-react";
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import type { UploadResponse } from "@/types/labs";
 
-export function PdfUploadDropzone({ onFileSelected, disabled }: { onFileSelected: (file: File) => void; disabled?: boolean }) {
+interface PdfUploadDropzoneProps {
+  onUpload: (file: File) => void;
+  uploadResult?: UploadResponse;
+  isUploading?: boolean;
+}
+
+export function PdfUploadDropzone({ onUpload, uploadResult, isUploading }: PdfUploadDropzoneProps) {
   const inputRef = useRef<HTMLInputElement | null>(null);
-  const [selectedName, setSelectedName] = useState<string | null>(null);
+  const [fileName, setFileName] = useState<string>("");
 
   function handleFile(file?: File) {
     if (!file) return;
-    setSelectedName(file.name);
-    onFileSelected(file);
+    setFileName(file.name);
+    onUpload(file);
   }
 
   return (
     <Card>
-      <CardContent className="p-8">
-        <div
-          className="flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50 px-6 py-12 text-center hover:bg-slate-100"
+      <CardHeader>
+        <CardTitle>Upload PDF report</CardTitle>
+        <CardDescription>Upload a text-based lab report PDF. Extracted values should be reviewed before analysis.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <button
+          type="button"
           onClick={() => inputRef.current?.click()}
           onDrop={(event) => {
             event.preventDefault();
-            handleFile(event.dataTransfer.files[0]);
+            handleFile(event.dataTransfer.files?.[0]);
           }}
           onDragOver={(event) => event.preventDefault()}
+          className="flex w-full flex-col items-center justify-center rounded-2xl border border-dashed border-blue-300 bg-blue-50/50 p-10 text-center transition hover:bg-blue-50"
         >
-          <UploadCloud className="h-12 w-12 text-blue-600" />
-          <h3 className="mt-4 text-lg font-semibold">Upload a PDF lab report</h3>
-          <p className="mt-2 max-w-xl text-sm text-slate-600">
-            The backend extracts possible lab values, then the user reviews them before analysis. Do not upload real PHI in a public demo.
-          </p>
-          {selectedName && <p className="mt-3 text-sm font-medium text-slate-700">Selected: {selectedName}</p>}
-          <Button type="button" className="mt-5" disabled={disabled}>
-            Choose PDF
-          </Button>
-          <input
-            ref={inputRef}
-            type="file"
-            accept="application/pdf"
-            className="hidden"
-            onChange={(event) => handleFile(event.target.files?.[0])}
-          />
-        </div>
+          <FileUp className="mb-3 h-8 w-8 text-blue-700" />
+          <span className="font-semibold text-slate-900">Drop a PDF here or click to browse</span>
+          <span className="mt-1 text-sm text-slate-500">Maximum size is controlled by the Flask API.</span>
+        </button>
+        <input ref={inputRef} type="file" accept="application/pdf" className="hidden" onChange={(event) => handleFile(event.target.files?.[0])} />
+        {fileName && <p className="text-sm text-slate-600">Selected: {fileName}</p>}
+        {isUploading && <p className="text-sm text-blue-700">Uploading and parsing...</p>}
+
+        {uploadResult && (
+          <div className="rounded-2xl border bg-slate-50 p-4">
+            <h3 className="font-semibold">Extraction preview</h3>
+            <p className="mt-1 text-sm text-slate-600">{uploadResult.message}</p>
+            <div className="mt-3 overflow-auto rounded-xl bg-white p-3 text-sm">
+              {uploadResult.extractedResults.length ? (
+                <table className="w-full min-w-[600px] text-left">
+                  <thead className="text-xs uppercase text-slate-500">
+                    <tr>
+                      <th className="py-2">Test</th>
+                      <th>Value</th>
+                      <th>Unit</th>
+                      <th>Range</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {uploadResult.extractedResults.map((item, index) => (
+                      <tr key={`${item.testName}-${index}`} className="border-t">
+                        <td className="py-2 font-medium">{item.testName}</td>
+                        <td>{item.value}</td>
+                        <td>{item.unit}</td>
+                        <td>{item.referenceRange?.low} - {item.referenceRange?.high}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <p>No structured values were extracted. This may be a scanned PDF or a layout that needs a custom parser.</p>
+              )}
+            </div>
+            <Button className="mt-4" variant="outline" disabled={!uploadResult.extractedResults.length}>
+              Review/edit extracted values — next step
+            </Button>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
