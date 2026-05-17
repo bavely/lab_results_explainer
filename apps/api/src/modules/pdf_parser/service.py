@@ -13,6 +13,13 @@ except ImportError:  # pragma: no cover - optional dependency path
     pytesseract = None
     Image = None
 
+try:
+    import cv2
+    import numpy as np
+except ImportError:  # pragma: no cover - optional dependency path
+    cv2 = None
+    np = None
+
 
 def _ocr_is_available() -> bool:
     if pytesseract is None or Image is None:
@@ -37,7 +44,7 @@ def _extract_text_with_ocr(page) -> str:
 
         try:
             pil_image = Image.open(BytesIO(image_data))
-            ocr_text = pytesseract.image_to_string(pil_image)
+            ocr_text = pytesseract.image_to_string(_enhance_image_for_ocr(pil_image))
         except Exception:
             continue
 
@@ -78,9 +85,35 @@ def extract_text_from_image_bytes(file_bytes: bytes) -> str:
 
     try:
         image = Image.open(BytesIO(file_bytes))
-        return pytesseract.image_to_string(image)
+        return pytesseract.image_to_string(_enhance_image_for_ocr(image))
     except Exception:
         return ""
+
+
+def _enhance_image_for_ocr(pil_image):
+    if cv2 is None or np is None:
+        return pil_image
+
+    image_array = np.array(pil_image.convert("RGB"))
+    bgr_image = cv2.cvtColor(image_array, cv2.COLOR_RGB2BGR)
+    grayscale = cv2.cvtColor(bgr_image, cv2.COLOR_BGR2GRAY)
+
+    denoised = cv2.fastNlMeansDenoising(grayscale, None, 20, 7, 21)
+    thresholded = cv2.adaptiveThreshold(
+        denoised,
+        255,
+        cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+        cv2.THRESH_BINARY,
+        31,
+        11,
+    )
+
+    kernel = np.ones((1, 1), np.uint8)
+    cleaned = cv2.morphologyEx(thresholded, cv2.MORPH_OPEN, kernel)
+    enhanced = cv2.medianBlur(cleaned, 3)
+
+    rgb_enhanced = cv2.cvtColor(enhanced, cv2.COLOR_GRAY2RGB)
+    return Image.fromarray(rgb_enhanced)
 
 
 def parse_lab_image(file_bytes: bytes) -> dict:
