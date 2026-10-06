@@ -10,7 +10,7 @@ import type { AnalyzeRequest } from "@/types/labs";
 
 const labRowSchema = z.object({
   testName: z.string().min(1, "Test name is required"),
-  value: z.coerce.number({ invalid_type_error: "Value is required" }),
+  value: z.coerce.number({ error: "Value is required" }),
   unit: z.string().optional(),
   referenceRange: z.object({
     low: z.preprocess((value) => value === "" ? undefined : value, z.coerce.number().optional()),
